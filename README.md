@@ -2,7 +2,7 @@
 
 > [원본 Instagram Skill](https://github.com/social-media-skills/instagram-skill)을 Fork한 **한국어 + Seedance 영상 생성 확장판**입니다. 원본의 이미지·캐러셀·릴스·스토리 제작, 검수, 미리보기, 예약 게시 기능은 유지하면서 선택적으로 AI 영상을 생성하고 한국어 자막을 합성할 수 있게 했습니다.
 >
-> **개발 상태:** `feature/seedance-ko-reels` 브랜치 · 선택적 Seedance 확장 · 오프라인 테스트 6개 통과. **실제 Seedance 유료 API 호출과 Instagram 게시 통합 테스트는 아직 완료되지 않았습니다.**
+> **개발 상태:** `feature/seedance-ko-reels` 브랜치 · 선택적 Seedance 확장 · 오프라인 테스트 10개 통과. **실제 Seedance 유료 API 호출과 Instagram 게시 통합 테스트는 아직 완료되지 않았습니다.**
 
 **Instagram Skill**은 Claude Code, Codex, Cursor, OpenClaw 같은 AI 에이전트가 인스타그램 게시물을 **기획 → 제작 → 검수 → 미리보기 → 사용자 승인 → 게시·예약**하도록 돕는 오픈소스 Skill입니다. 한 계정 또는 여러 계정의 캐러셀, 단일 이미지, 릴스, 스토리를 지원합니다.
 
@@ -19,12 +19,12 @@
 
 이 Fork에서 추가된 기능:
 
-- **Seedance 영상 생성:** Replicate API를 통해 사진과 프롬프트로 AI 영상 생성
+- **Seedance 영상 생성:** Higgsfield CLI를 통해 사진과 프롬프트로 AI 영상 생성
 - **한국어 영상 편집:** 여러 영상 결합, 시간대별 한글 자막, 실제 제품 사진 엔딩 카드
 - **한글 글꼴 지원:** 환경 변수를 설정하면 한국어 글꼴로 렌더링
 - **중복 생성 방지:** 작업 ID 저장과 중단된 생성 작업 재개(`--resume`)
 
-**비용 구분:** 기본 캐러셀·이미지·기존 영상 처리에는 별도 영상 생성 API 비용이 필요하지 않습니다. **Seedance 실제 생성에는 Replicate API 요금이 발생할 수 있습니다.** Instagram 자동 게시에는 별도 WoopSocial 계정 연결이 필요합니다.
+**비용 구분:** 기본 캐러셀·이미지·기존 영상 처리에는 별도 영상 생성 API 비용이 필요하지 않습니다. **Seedance 실제 생성에는 Higgsfield 구독 크레딧이 차감될 수 있습니다.** Instagram 자동 게시에는 별도 WoopSocial 계정 연결이 필요합니다.
 
 ![Instagram Skill로 제작한 캐러셀, 릴스, 스토리 및 미리보기 예시](skills/instagram-skill/examples/showcase.png)
 
@@ -65,7 +65,7 @@
               ↓
       프롬프트·장면 기획
               ↓
-  [신규] Seedance / Replicate API
+  [신규] Seedance / Higgsfield CLI
               ↓
       원본 영상 MP4 저장
               ↓
@@ -90,10 +90,10 @@ Seedance 생성 모듈과 영상 편집 모듈은 **자동 게시 기능을 포�
 |---|---|---|
 | AI 에이전트 | Codex, Claude Code, Cursor, OpenClaw 등 | 동일 |
 | Python | **3.9 이상** | 동일 |
-| Python 라이브러리 | Pillow | 신규 API 모듈은 표준 라이브러리 사용 |
+| Python 라이브러리 | Pillow | 신규 실행 모듈은 표준 라이브러리 사용 |
 | FFmpeg·FFprobe | 영상 작업 시 필요 | 필수 |
 | 한국어 글꼴 | 한국어 슬라이드·표지 사용 시 필요 | 한국어 자막 시 필요 |
-| Replicate API 키 | 불필요 | 실제 영상 생성 시 필요 |
+| Higgsfield CLI·로그인 | 불필요 | 실제 영상 생성 시 필요 (API 키 불필요) |
 | WoopSocial 연결 | 자동 게시할 때 필요 | 자동 게시할 때 동일하게 필요 |
 
 선택 사항: iPhone HEIC 사진을 사용한다면 `pillow-heif`를 설치할 수 있습니다. Windows에서는 시간대 관련 패키지 `tzdata`도 권장합니다.
@@ -150,16 +150,18 @@ npx skills add social-media-skills/instagram-skill -g -a claude-code -y
 
 이 기능은 **선택적 확장**입니다. 기존 사진·캐러셀·실제 영상 릴스 기능은 Seedance 없이 그대로 사용할 수 있습니다.
 
-### 4.1 Replicate API 설정
+### 4.1 Higgsfield CLI 설치 및 로그인
 
-Replicate에서 API 접근 권한을 준비하고 `REPLICATE_API_TOKEN` 환경 변수에 키를 설정합니다. 키를 공개 저장소, 코드, 프롬프트, 커밋에 넣지 마세요.
+이 Fork의 영상 생성은 **Higgsfield CLI 한 가지 방식**만 사용합니다. Replicate 계정이나 별도 API 키는 필요하지 않습니다. Windows에서는 Node.js/npm을 설치한 후 아래를 실행합니다.
 
 ```powershell
-# Windows PowerShell — 현재 터미널 세션에서만 사용
-$env:REPLICATE_API_TOKEN = "발급받은_API_키"
+npm install -g @higgsfield/cli
+higgsfield auth login
+higgsfield account status
+higgsfield model get seedance_2_5
 ```
 
-모델 기본값은 `bytedance/seedance-2.5`이며, API 요청 필드는 조사한 Replicate 워크플로를 참고했습니다. **실제 제공사의 모델 가용성·입력 스키마·가격은 사용 전에 반드시 확인**해야 합니다.
+브라우저 로그인 후 Higgsfield 계정의 구독 크레딧으로 생성합니다. **Higgsfield 웹의 무료·Unlimited 혜택은 CLI 생성에는 적용되지 않습니다.** 실행 전에는 `higgsfield generate cost`로 크레딧 비용을 확인하세요. 모델 ID는 `seedance_2_5`로 고정하며, 지원 길이는 4~30초입니다.
 
 ### 4.2 생성 전에 무료 Dry Run 실행
 
@@ -168,17 +170,23 @@ cd skills/instagram-skill
 py scripts/seedance_video.py --prompt "따뜻한 주방에서 빵 반죽이 발효되는 장면" --image product.jpg --duration 15 --out reel/raw.mp4 --dry-run
 ```
 
-`--dry-run`은 **네트워크 요청·과금 없이** 보낼 입력값만 표시합니다. `product.jpg`는 실제 로컬 파일이어야 합니다.
+`--dry-run`은 **네트워크 요청·과금 없이** Higgsfield CLI 명령 구성을 표시합니다. `product.jpg`는 실제 로컬 파일이어야 합니다.
+
+실제 크레딧 확인 예시(생성하지 않음):
+
+```powershell
+higgsfield generate cost seedance_2_5 --mode omni_reference --start-image product.jpg --prompt "따뜻한 주방에서 빵 반죽이 발효되는 장면" --duration 5 --resolution 720p --aspect_ratio 9:16
+```
 
 ### 4.3 실제 영상 생성
 
 ```powershell
-py scripts/seedance_video.py --prompt-file prompt_ko.txt --image product.jpg --duration 15 --out reel/raw.mp4
+py scripts/seedance_video.py --prompt-file prompt_ko.txt --image product.jpg --duration 5 --out reel/raw.mp4
 ```
 
 - `--prompt` 또는 `--prompt-file`로 제작 프롬프트 지정
 - `--image`는 참조 사진을 최대 4장까지 반복 지정 가능
-- `--duration`으로 길이 지정(기본값 15초, 실제 지원 범위는 모델에 따름)
+- `--duration`으로 길이 지정(기본값 15초, Seedance 2.5 지원 범위 4~30초)
 - 결과 MP4를 `--out`에 저장
 - 작업 정보는 `reel/raw.job.json`에 저장
 - 생성 중 연결이 끊겼다면 `--resume`으로 **기존 작업 조회**
@@ -372,7 +380,7 @@ MCP 연결 후 Codex 세션을 새로 열거나 재개해야 할 수 있습니�
 네. Seedance는 선택 기능이며, 사진·캐러셀·기존 영상 릴스·스토리·검수·미리보기·게시 기능은 그대로 유지됩니다.
 
 **Q. Seedance 영상은 무료인가요?**  
-아닙니다. `--dry-run`은 무료이지만 실제 모델 생성에는 Replicate API 비용이 발생할 수 있습니다.
+아닙니다. `--dry-run`은 무료이지만 실제 모델 생성에는 Higgsfield 구독 크레딧이 사용됩니다. CLI 생성에는 웹사이트의 Unlimited 혜택이 적용되지 않습니다.
 
 **Q. 인간의 검토와 수정 피드백을 반복할 수 있나요?**  
 네. Codex와 대화하면서 자막을 수정하거나 필요한 클립만 별도로 재생성하고, 미리보기를 다시 생성하는 방식입니다. 자동 피드백 웹 UI나 자동 승인 시스템은 포함되어 있지 않습니다.
@@ -434,7 +442,7 @@ instagram-skill/
 py -m unittest discover -s tests -p test_seedance_extension.py -v
 ```
 
-이 테스트는 실제 Replicate 과금 요청이나 Instagram 게시를 수행하지 않습니다. **실제 생성·게시 성공 여부를 보증하는 통합 테스트는 아닙니다.**
+이 테스트는 실제 Higgsfield 과금 요청이나 Instagram 게시를 수행하지 않습니다. **실제 생성·게시 성공 여부를 보증하는 통합 테스트는 아닙니다.**
 
 ### 출처 및 라이선스
 

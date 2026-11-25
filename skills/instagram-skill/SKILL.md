@@ -124,30 +124,31 @@ slide types and type rules: `references/design-rules.md`. In short:
 **The user's own photos and screenshots.** Use them as they are, or inside slides (`photo`,
 `screenshot`, `beforeafter`). `ig_check.py --fix` converts and fits them.
 
-**Optional Seedance-generated Reels (Replicate).** When the user expressly wants
-AI-generated original footage, first create it with the separate optional adapter. This is
-not a replacement for the existing real-footage Reel workflow. The adapter does NOT publish.
+**Optional Seedance-generated Reels (Higgsfield CLI only).** When the user requests
+AI-generated footage, use the installed official Higgsfield CLI to run Seedance 2.5.
+This does not replace the existing real-footage workflow or publish content.
 
 ```bash
-python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 15 --out reel/raw.mp4 --dry-run
-python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 15 --out reel/raw.mp4
+python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 5 --out reel/raw.mp4 --dry-run
+python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 5 --out reel/raw.mp4
 python3 scripts/compose_reel.py --clip reel/raw.mp4 --photo product.jpg --captions captions_ko.json --out reel/final.mp4
 ```
 
-- Set `REPLICATE_API_TOKEN` locally before actual generation; never put keys in a prompt,
-  tracked file, or commit. Use `--dry-run` before incurring model charges.
-- Existing prediction state is saved as `reel/raw.job.json`; use `--resume` instead of
-  submitting another paid generation after interruption.
-- For Korean slides and Reel cover text, set `INSTAGRAM_SKILL_LANG=ko`, or set
-  `INSTAGRAM_KOREAN_FONT` to a Korean font file. Without these settings the original
-  Inter/Instrument Serif behavior remains unchanged.
-- `compose_reel.py` accepts multiple `--clip` arguments and UTF-8 timecoded captions,
-  preserves the source audio, and optionally appends the unchanged product photo.
-- Compare AI-generated visuals with actual product photos. No fabricated product features,
-  customer testimonials, or unlicensed music. Label synthetic advertising as required.
-- Then run the ORIGINAL `reel.py` (cover/zones), `ig_check.py`, `preview.py` and
-  WoopSocial publishing workflow. Keep its explicit approval-before-post rule.
-- Korean setup and usage examples: `references/README_KO.md`.
+- Install Higgsfield CLI (`npm install -g @higgsfield/cli`), then run `higgsfield auth login`.
+  No Replicate account or API key is needed. CLI generations spend Higgsfield plan
+  credits even if the website offers unlimited generations; check cost before creating.
+- `--dry-run` is offline and never charges. The adapter uses the single model
+  `seedance_2_5`, with `--mode omni_reference` for reference photos or
+  `--mode t2v` for prompt-only videos. Duration must be 4–30 seconds.
+- The generated job ID is saved in `reel/raw.job.json`; use `--resume` to
+  check that job rather than submitting another paid generation.
+- For Korean slide/cover lettering set `INSTAGRAM_SKILL_LANG=ko` or set
+  `INSTAGRAM_KOREAN_FONT`. Default English fonts are unchanged.
+- Use the unchanged `compose_reel.py` for Korean captions, clip assembly, and
+  optionally appending a genuine product photo. Review AI product accuracy and claims.
+- Then follow the ORIGINAL `reel.py` (cover/zones), `ig_check.py`, `preview.py`
+  and WoopSocial workflow. Posting requires explicit user approval.
+- Korean Windows setup: `references/README_KO.md`.
 
 **Reels from the user's own video.** This skill finishes Reels; it doesn't edit footage.
 

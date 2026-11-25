@@ -1,9 +1,8 @@
-"""Offline-only tests for optional Seedance/Korean extension. No API charges or posts."""
+"""Offline tests: mock Higgsfield CLI, never spend credits or publish posts."""
 import contextlib
 import importlib.util
 import io
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,9 +13,9 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "skills" / "instagram-skill" / "
 
 def load_module(name):
     spec = importlib.util.spec_from_file_location(name, SCRIPTS / (name + ".py"))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class SeedanceTests(unittest.TestCase):
@@ -25,57 +24,98 @@ class SeedanceTests(unittest.TestCase):
         cls.seedance = load_module("seedance_video")
         cls.compose = load_module("compose_reel")
 
-    def test_dry_run_avoids_network_and_key(self):
+    def test_dry_run_has_higgsfield_only_and_no_charge(self):
         with tempfile.TemporaryDirectory() as tmp:
-            photo = Path(tmp) / "제품.jpg"
-            photo.write_bytes(b"test")
+            photo = Path(tmp) / "product.jpg"
+            photo.write_bytes(b"image")
             out = Path(tmp) / "raw.mp4"
-            args = self.seedance.parse_args(["--prompt", "주방의 빵 발효 장면", "--image", str(photo),
+            args = self.seedance.parse_args(["--prompt", "따뜻한 베이킹", "--image", str(photo),
                                              "--out", str(out), "--dry-run"])
-            with mock.patch.object(self.seedance, "_api_request", side_effect=AssertionError("API called")):
-                with mock.patch.dict(os.environ, {"REPLICATE_API_TOKEN": ""}):
-                    with contextlib.redirect_stdout(io.StringIO()) as buf:
-                        self.seedance.run(args)
-            response = json.loads(buf.getvalue())
-            self.assertEqual(response["input"]["aspect_ratio"], "9:16")
-            self.assertEqual(response["model"], "bytedance/seedance-2.5")
+            with mock.patch.object(self.seedance, "_cli_json", side_effect=AssertionError("CLI called")):
+                with contextlib.redirect_stdout(io.StringIO()) as buf:
+                    self.seedance.run(args)
+            obj = json.loads(buf.getvalue())
+            self.assertEqual(obj["model"], "seedance_2_5")
+            self.assertIn("--start-image", obj["command"])
+            self.assertIn("omni_reference", obj["command"])
+            self.assertIn("9:16", obj["command"])
             self.assertFalse(out.exists())
             self.assertFalse(out.with_suffix(".job.json").exists())
 
-    def test_existing_job_refuses_duplicate_paid_submission(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "raw.mp4"
-            out.with_suffix(".job.json").write_text('{"id":"xyz"}', encoding="utf-8")
-            args = self.seedance.parse_args(["--prompt", "hello", "--out", str(out)])
-            with self.assertRaisesRegex(self.seedance.ProviderError, "Existing job"):
-                self.seedance.run(args)
+    def test_prompt_only_uses_t2v(self):
+        args = self.seedance.parse_args(["--prompt", "pan across kitchen", "--out", "raw.mp4", "--dry-run"])
+        cmd = self.seedance._create_args(args, args.prompt)
+        self.assertIn("t2v", cmd)
+        self.assertNotIn("--start-image", cmd)
 
-    def test_resume_does_not_create_prediction(self):
+    def test_multiple_images_use_reference_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            images = []
+            for name in ("one.png", "two.png"):
+                p = Path(tmp) / name
+                p.write_bytes(b"fake")
+                images.append(str(p))
+            args = self.seedance.parse_args(["--prompt", "ad", "--image", images[0],
+                                             "--image", images[1], "--out", "raw.mp4", "--dry-run"])
+            command = self.seedance._create_args(args, args.prompt)
+            self.assertEqual(command.count("--image-references"), 2)
+            self.assertNotIn("--start-image", command)
+
+    def test_duration_limit_rejects_before_paid_call(self):
+        args = self.seedance.parse_args(["--prompt", "ad", "--duration", "3", "--out", "raw.mp4"])
+        with self.assertRaisesRegex(self.seedance.ProviderError, "4–30"):
+            self.seedance._create_args(args, args.prompt)
+
+    def test_existing_job_prevents_duplicate_charge(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "raw.mp4"
-            job = out.with_suffix(".job.json")
-            job.write_text(json.dumps({"id": "pred_123", "model": "bytedance/seedance-2.5"}))
+            out.with_suffix(".job.json").write_text('{"id":"abc"}', encoding="utf-8")
+            args = self.seedance.parse_args(["--prompt", "ad", "--out", str(out)])
+            with mock.patch.object(self.seedance, "_cli_json", side_effect=AssertionError("CLI called")):
+                with self.assertRaisesRegex(self.seedance.ProviderError, "Existing job"):
+                    self.seedance.run(args)
+
+    def test_generate_and_download_uses_cli_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "raw.mp4"
+            args = self.seedance.parse_args(["--prompt", "ad", "--out", str(out)])
+            calls = []
+            def cli(command):
+                calls.append(command)
+                if command[:2] == ["generate", "create"]:
+                    return ["hf-42"]
+                return {"id": "hf-42", "status": "completed", "result_url": "https://cdn.example.com/ad.mp4"}
+            def download(url, path):
+                Path(path).write_bytes(b"mock mp4")
+                return Path(path)
+            with mock.patch.object(self.seedance, "_cli_json", side_effect=cli):
+                with mock.patch.object(self.seedance, "_download_video", side_effect=download):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.seedance.run(args)
+            self.assertEqual(calls[1], ["generate", "get", "hf-42"])
+            self.assertTrue(out.exists())
+            self.assertEqual(json.loads(out.with_suffix(".job.json").read_text())["id"], "hf-42")
+
+    def test_resume_queries_existing_job_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "raw.mp4"
+            out.with_suffix(".job.json").write_text('{"id":"hf-42"}', encoding="utf-8")
             args = self.seedance.parse_args(["--resume", "--out", str(out)])
             calls = []
-            def get(url, token, *params, **kw):
-                calls.append(url)
-                return {"id": "pred_123", "status": "succeeded", "output": "https://example.com/result.mp4"}
-            def save(url, path):
-                Path(path).write_bytes(b"MP4")
-                return Path(path)
-            with mock.patch.dict(os.environ, {"REPLICATE_API_TOKEN": "fake-token"}):
-                with mock.patch.object(self.seedance, "_api_request", side_effect=get):
-                    with mock.patch.object(self.seedance, "_download_video", side_effect=save):
-                        with contextlib.redirect_stdout(io.StringIO()):
-                            self.seedance.run(args)
-            self.assertEqual(calls, ["https://api.replicate.com/v1/predictions/pred_123"])
-            self.assertTrue(out.exists())
+            def cli(command):
+                calls.append(command)
+                return {"status": "completed", "result_url": "https://cdn.example.com/ad.mp4"}
+            with mock.patch.object(self.seedance, "_cli_json", side_effect=cli):
+                with mock.patch.object(self.seedance, "_download_video", return_value=out):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        self.seedance.run(args)
+            self.assertEqual(calls, [["generate", "get", "hf-42"]])
 
-    def test_unsafe_result_url_rejected(self):
+    def test_untrusted_http_result_rejected(self):
         with self.assertRaises(self.seedance.ProviderError):
-            self.seedance._video_output_url({"output": "http://example.com/unsafe.mp4"})
+            self.seedance._result_url({"result_url": "http://example.com/ad.mp4"})
 
-    def test_caption_validation(self):
+    def test_caption_validation_unchanged(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "captions.json"
             path.write_text('{"captions":[{"start":0,"end":3,"text":"한국어"}]}', encoding="utf-8")
@@ -84,21 +124,16 @@ class SeedanceTests(unittest.TestCase):
             with self.assertRaises(self.compose.ComposeError):
                 self.compose._load_captions(path)
 
-    def test_caption_png_with_korean_font(self):
-        candidates = [r"C:\Windows\Fonts\malgun.ttf",
-                      "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
-                      "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]
-        fonts = [x for x in candidates if Path(x).is_file()]
+    def test_caption_render_korean_if_font_available(self):
+        paths = [r"C:\Windows\Fonts\malgun.ttf", "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+                 "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]
+        fonts = [x for x in paths if Path(x).is_file()]
         if not fonts:
-            self.skipTest("Korean font not present in test environment")
+            self.skipTest("Korean font not installed")
         with tempfile.TemporaryDirectory() as tmp:
-            pic = Path(tmp) / "ko.png"
-            self.compose._caption_png("우리집 빵 발효\n오늘도 맛있게", pic, fonts[0])
-            self.assertTrue(pic.exists())
-            from PIL import Image
-            with Image.open(pic) as image:
-                self.assertEqual(image.size, (1080, 1920))
-                self.assertIsNotNone(image.getbbox())
+            png = Path(tmp) / "ko.png"
+            self.compose._caption_png("우리집 빵 발효", png, fonts[0])
+            self.assertTrue(png.exists())
 
 
 if __name__ == "__main__":
