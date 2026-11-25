@@ -18,7 +18,7 @@ def load_module(name):
     return module
 
 
-class SeedanceTests(unittest.TestCase):
+class KlingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.seedance = load_module("seedance_video")
@@ -35,20 +35,24 @@ class SeedanceTests(unittest.TestCase):
                 with contextlib.redirect_stdout(io.StringIO()) as buf:
                     self.seedance.run(args)
             obj = json.loads(buf.getvalue())
-            self.assertEqual(obj["model"], "seedance_2_5")
+            self.assertEqual(obj["model"], "kling3_0")
             self.assertIn("--start-image", obj["command"])
-            self.assertIn("omni_reference", obj["command"])
+            self.assertIn("std", obj["command"])
+            self.assertNotIn("--resolution", obj["command"])
+            self.assertNotIn("--image-references", obj["command"])
             self.assertIn("9:16", obj["command"])
             self.assertFalse(out.exists())
             self.assertFalse(out.with_suffix(".job.json").exists())
 
-    def test_prompt_only_uses_t2v(self):
+    def test_prompt_only_uses_std_mode(self):
         args = self.seedance.parse_args(["--prompt", "pan across kitchen", "--out", "raw.mp4", "--dry-run"])
         cmd = self.seedance._create_args(args, args.prompt)
-        self.assertIn("t2v", cmd)
+        self.assertEqual(cmd[0:3], ["generate", "create", "kling3_0"])
+        self.assertIn("std", cmd)
         self.assertNotIn("--start-image", cmd)
+        self.assertNotIn("--resolution", cmd)
 
-    def test_multiple_images_use_reference_flags(self):
+    def test_multiple_images_rejected_before_paid_call(self):
         with tempfile.TemporaryDirectory() as tmp:
             images = []
             for name in ("one.png", "two.png"):
@@ -56,14 +60,18 @@ class SeedanceTests(unittest.TestCase):
                 p.write_bytes(b"fake")
                 images.append(str(p))
             args = self.seedance.parse_args(["--prompt", "ad", "--image", images[0],
-                                             "--image", images[1], "--out", "raw.mp4", "--dry-run"])
-            command = self.seedance._create_args(args, args.prompt)
-            self.assertEqual(command.count("--image-references"), 2)
-            self.assertNotIn("--start-image", command)
+                                             "--image", images[1], "--out", "raw.mp4"])
+            with self.assertRaisesRegex(self.seedance.ProviderError, "at most one reference image"):
+                self.seedance._create_args(args, args.prompt)
+
+    def test_no_audio_uses_kling_sound_off(self):
+        args = self.seedance.parse_args(["--prompt", "ad", "--no-audio", "--out", "raw.mp4"])
+        cmd = self.seedance._create_args(args, args.prompt)
+        self.assertEqual(cmd[cmd.index("--sound") + 1], "off")
 
     def test_duration_limit_rejects_before_paid_call(self):
-        args = self.seedance.parse_args(["--prompt", "ad", "--duration", "3", "--out", "raw.mp4"])
-        with self.assertRaisesRegex(self.seedance.ProviderError, "4–30"):
+        args = self.seedance.parse_args(["--prompt", "ad", "--duration", "2", "--out", "raw.mp4"])
+        with self.assertRaisesRegex(self.seedance.ProviderError, "3–15"):
             self.seedance._create_args(args, args.prompt)
 
     def test_existing_job_prevents_duplicate_charge(self):
@@ -110,6 +118,16 @@ class SeedanceTests(unittest.TestCase):
                     with contextlib.redirect_stdout(io.StringIO()):
                         self.seedance.run(args)
             self.assertEqual(calls, [["generate", "get", "hf-42"]])
+
+    def test_resume_rejects_previous_model_job(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "raw.mp4"
+            out.with_suffix(".job.json").write_text(
+                '{"id":"old-99","model":"seedance_2_5"}', encoding="utf-8")
+            args = self.seedance.parse_args(["--resume", "--out", str(out)])
+            with mock.patch.object(self.seedance, "_cli_json", side_effect=AssertionError("CLI called")):
+                with self.assertRaisesRegex(self.seedance.ProviderError, "another model"):
+                    self.seedance.run(args)
 
     def test_untrusted_http_result_rejected(self):
         with self.assertRaises(self.seedance.ProviderError):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Seedance 2.5 video through the official Higgsfield CLI.
+"""Generate Kling 3.0 video through the official Higgsfield CLI.
 
 Higgsfield is the only provider. Run `higgsfield auth login` once; no API key.
 Never publishes to Instagram. --dry-run makes no network calls or charges.
@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
-MODEL = "seedance_2_5"
+MODEL = "kling3_0"
 FINISHED = {"completed", "succeeded", "success"}
 FAILED = {"failed", "error", "canceled", "cancelled", "aborted"}
 
@@ -106,29 +106,22 @@ def _download_video(url, output):
 
 
 def _create_args(args, prompt):
-    if not 4 <= args.duration <= 30:
-        raise ProviderError("Seedance 2.5 duration must be 4–30 seconds")
-    if len(args.image) > 4:
-        raise ProviderError("Use at most four reference images")
+    # The official Kling 3.0 CLI schema accepts ONE start image, not multiple references.
+    if not 3 <= args.duration <= 15:
+        raise ProviderError("Kling 3.0 duration must be 3–15 seconds")
+    if len(args.image) > 1:
+        raise ProviderError("Kling 3.0 accepts at most one reference image")
     for image in args.image:
         p = Path(image)
         if not p.is_file() or p.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
             raise ProviderError(f"Image must exist and be JPG/PNG/WebP: {image}")
-    command = ["generate", "create", MODEL, "--prompt", prompt, "--duration", str(args.duration),
-               "--resolution", args.resolution, "--aspect_ratio", "9:16"]
+    # std is the default/low-complexity tier; Kling 3.0 uses mode, not resolution.
+    command = ["generate", "create", MODEL, "--prompt", prompt,
+               "--duration", str(args.duration), "--aspect_ratio", "9:16",
+               "--mode", "std", "--sound", "off" if args.no_audio else "on"]
     if args.image:
-        command += ["--mode", "omni_reference"]
-        if len(args.image) == 1:
-            command += ["--start-image", str(args.image[0])]
-        else:
-            for image in args.image:
-                command += ["--image-references", str(image)]
-    else:
-        command += ["--mode", "t2v"]
-    if args.no_audio:
-        command += ["--generate_audio", "false"]
+        command += ["--start-image", str(args.image[0])]
     return command
-
 
 def run(args):
     output = Path(args.out)
@@ -140,6 +133,8 @@ def run(args):
         job_id = state.get("id")
         if not job_id:
             raise ProviderError("Saved job does not contain an ID")
+        if state.get("model") not in (None, MODEL):
+            raise ProviderError("Saved job belongs to another model; use its original workflow")
         if args.dry_run:
             print(json.dumps({"dry_run": True, "resume_id": job_id}, ensure_ascii=False))
             return
@@ -181,13 +176,12 @@ def run(args):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Seedance 2.5 via Higgsfield CLI (not Replicate)")
+    parser = argparse.ArgumentParser(description="Kling 3.0 via Higgsfield CLI (single model, no API key)")
     prompt = parser.add_mutually_exclusive_group()
     prompt.add_argument("--prompt")
     prompt.add_argument("--prompt-file", help="UTF-8 prompt file")
-    parser.add_argument("--image", action="append", default=[], help="JPG/PNG/WebP, repeat for references")
+    parser.add_argument("--image", action="append", default=[], help="Optional single JPG/PNG/WebP product photo")
     parser.add_argument("--duration", type=int, default=15)
-    parser.add_argument("--resolution", choices=["480p", "720p", "1080p"], default="720p")
     parser.add_argument("--no-audio", action="store_true")
     parser.add_argument("--out", required=True, help="Generated MP4 destination")
     parser.add_argument("--job-file", help="Job status JSON; defaults to <out>.job.json")

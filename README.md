@@ -1,8 +1,8 @@
 # Instagram Skill — Codex · Claude Code · Cursor · OpenClaw용 인스타그램 자동화
 
-> [원본 Instagram Skill](https://github.com/social-media-skills/instagram-skill)을 Fork한 **한국어 + Seedance 영상 생성 확장판**입니다. 원본의 이미지·캐러셀·릴스·스토리 제작, 검수, 미리보기, 예약 게시 기능은 유지하면서 선택적으로 AI 영상을 생성하고 한국어 자막을 합성할 수 있게 했습니다.
+> [원본 Instagram Skill](https://github.com/social-media-skills/instagram-skill)을 Fork한 **한국어 + Kling 3.0 영상 생성 확장판**입니다. 원본의 이미지·캐러셀·릴스·스토리 제작, 검수, 미리보기, 예약 게시 기능은 유지하면서 선택적으로 AI 영상을 생성하고 한국어 자막을 합성할 수 있게 했습니다.
 >
-> **개발 상태:** `feature/seedance-ko-reels` 브랜치 · 선택적 Seedance 확장 · 오프라인 테스트 10개 통과. **실제 Seedance 유료 API 호출과 Instagram 게시 통합 테스트는 아직 완료되지 않았습니다.**
+> **개발 상태:** `feature/seedance-ko-reels` 브랜치 · 선택적 Kling 3.0 확장 · 오프라인 테스트 포함 (실제 유료 생성 미검증). **실제 Kling 3.0 유료 API 호출과 Instagram 게시 통합 테스트는 아직 완료되지 않았습니다.**
 
 **Instagram Skill**은 Claude Code, Codex, Cursor, OpenClaw 같은 AI 에이전트가 인스타그램 게시물을 **기획 → 제작 → 검수 → 미리보기 → 사용자 승인 → 게시·예약**하도록 돕는 오픈소스 Skill입니다. 한 계정 또는 여러 계정의 캐러셀, 단일 이미지, 릴스, 스토리를 지원합니다.
 
@@ -19,12 +19,12 @@
 
 이 Fork에서 추가된 기능:
 
-- **Seedance 영상 생성:** Higgsfield CLI를 통해 사진과 프롬프트로 AI 영상 생성
+- **Kling 3.0 영상 생성:** Higgsfield CLI를 통해 사진과 프롬프트로 AI 영상 생성
 - **한국어 영상 편집:** 여러 영상 결합, 시간대별 한글 자막, 실제 제품 사진 엔딩 카드
 - **한글 글꼴 지원:** 환경 변수를 설정하면 한국어 글꼴로 렌더링
 - **중복 생성 방지:** 작업 ID 저장과 중단된 생성 작업 재개(`--resume`)
 
-**비용 구분:** 기본 캐러셀·이미지·기존 영상 처리에는 별도 영상 생성 API 비용이 필요하지 않습니다. **Seedance 실제 생성에는 Higgsfield 구독 크레딧이 차감될 수 있습니다.** Instagram 자동 게시에는 별도 WoopSocial 계정 연결이 필요합니다.
+**비용 구분:** 기본 캐러셀·이미지·기존 영상 처리에는 별도 영상 생성 API 비용이 필요하지 않습니다. **Kling 3.0 실제 생성에는 Higgsfield 구독 크레딧이 차감될 수 있습니다.** Instagram 자동 게시에는 별도 WoopSocial 계정 연결이 필요합니다.
 
 ![Instagram Skill로 제작한 캐러셀, 릴스, 스토리 및 미리보기 예시](skills/instagram-skill/examples/showcase.png)
 
@@ -35,7 +35,7 @@
 - [1. 기능과 실행 흐름](#1-기능과-실행-흐름)
 - [2. 실행 환경 및 준비물](#2-실행-환경-및-준비물)
 - [3. 설치](#3-설치)
-- [4. Seedance AI 릴스 제작](#4-seedance-ai-릴스-제작)
+- [4. Kling 3.0 AI 릴스 제작](#4-seedance-ai-릴스-제작)
 - [5. 한국어 글꼴 및 자막](#5-한국어-글꼴-및-자막)
 - [6. 기존 기능 사용 예시](#6-기존-기능-사용-예시)
 - [7. 검수 항목](#7-검수-항목)
@@ -46,11 +46,11 @@
 
 ## 1. 기능과 실행 흐름
 
-에이전트에게 “이번 주 인스타그램 게시물을 만들어줘”, “이 사진으로 캐러셀을 만들어줘”, “이 영상을 릴스로 올려줘”, “제품 사진으로 Seedance 광고 영상을 만들어줘”처럼 요청할 수 있습니다.
+에이전트에게 “이번 주 인스타그램 게시물을 만들어줘”, “이 사진으로 캐러셀을 만들어줘”, “이 영상을 릴스로 올려줘”, “제품 사진으로 Kling 3.0 광고 영상을 만들어줘”처럼 요청할 수 있습니다.
 
 1. **계정 파악:** 브랜드, 타깃, 계정, 색상, 언어, 시간대, 기존 게시물을 확인하고 `brand.md`에 기록
 2. **형식 결정:** 저장을 유도하는 캐러셀, 신규 도달용 릴스, 단일 이미지, 기존 팔로워 대상 스토리 중 목적에 맞는 형식 선택
-3. **미디어 제작:** 기존 이미지·영상 도구 사용. AI 영상을 명시적으로 요청한 경우에만 Seedance 확장 사용
+3. **미디어 제작:** 기존 이미지·영상 도구 사용. AI 영상을 명시적으로 요청한 경우에만 Kling 3.0 확장 사용
 4. **캡션 작성:** 검색어·첫 문장 후킹·행동 요청·최대 5개 해시태그·이미지 대체 텍스트 작성
 5. **규격 검사:** `ig_check.py`로 검사하고 필요한 경우 원본을 유지한 채 수정본 생성
 6. **게시 계획:** 계정별 시간대와 팔로워 활동 시간에 따라 일정 수립
@@ -65,7 +65,7 @@
               ↓
       프롬프트·장면 기획
               ↓
-  [신규] Seedance / Higgsfield CLI
+  [신규] Kling 3.0 / Higgsfield CLI
               ↓
       원본 영상 MP4 저장
               ↓
@@ -82,11 +82,11 @@
   [기존] WoopSocial: 게시·예약
 ```
 
-Seedance 생성 모듈과 영상 편집 모듈은 **자동 게시 기능을 포함하지 않습니다**. 기존 Skill의 사용자 승인 규칙을 따릅니다.
+Kling 3.0 생성 모듈과 영상 편집 모듈은 **자동 게시 기능을 포함하지 않습니다**. 기존 Skill의 사용자 승인 규칙을 따릅니다.
 
 ## 2. 실행 환경 및 준비물
 
-| 항목 | 기본 기능 | Seedance 확장 |
+| 항목 | 기본 기능 | Kling 3.0 확장 |
 |---|---|---|
 | AI 에이전트 | Codex, Claude Code, Cursor, OpenClaw 등 | 동일 |
 | Python | **3.9 이상** | 동일 |
@@ -113,13 +113,13 @@ python3 -m pip install pillow
 python3 skills/instagram-skill/scripts/check_setup.py
 ```
 
-원본 프로젝트는 Windows, macOS, Ubuntu용 파이프라인 테스트를 포함합니다. 이번 Seedance 확장은 별도의 오프라인 단위 테스트도 제공합니다.
+원본 프로젝트는 Windows, macOS, Ubuntu용 파이프라인 테스트를 포함합니다. 이번 Kling 3.0 확장은 별도의 오프라인 단위 테스트도 제공합니다.
 
 ## 3. 설치
 
 ### Codex — 이 Fork 버전 사용
 
-**원본 `social-media-skills/instagram-skill`을 설치하면 Seedance 확장이 포함되지 않습니다.** 확장 버전은 아래 `dogsa33` 저장소를 대상으로 설치해야 합니다.
+**원본 `social-media-skills/instagram-skill`을 설치하면 Kling 3.0 확장이 포함되지 않습니다.** 확장 버전은 아래 `dogsa33` 저장소를 대상으로 설치해야 합니다.
 
 ```bash
 npx skills add dogsa33/instagram-skill
@@ -146,22 +146,22 @@ npx skills add social-media-skills/instagram-skill -g -a claude-code -y
 
 원본은 OpenClaw(`openclaw skills install @social-media-skills/instagram-skill`), GitHub CLI(`gh skill install social-media-skills/instagram-skill instagram-skill`), Gemini CLI(`gemini extensions install https://github.com/social-media-skills/instagram-skill`)에서도 설치할 수 있습니다. **이 원본 설치 명령은 이 Fork의 추가 기능을 설치하는 명령이 아닙니다.**
 
-## 4. Seedance AI 릴스 제작
+## 4. Kling 3.0 AI 릴스 제작
 
-이 기능은 **선택적 확장**입니다. 기존 사진·캐러셀·실제 영상 릴스 기능은 Seedance 없이 그대로 사용할 수 있습니다.
+이 기능은 **선택적 확장**입니다. 기존 사진·캐러셀·실제 영상 릴스 기능은 Kling 3.0 없이 그대로 사용할 수 있습니다.
 
 ### 4.1 Higgsfield CLI 설치 및 로그인
 
-이 Fork의 영상 생성은 **Higgsfield CLI 한 가지 방식**만 사용합니다. Replicate 계정이나 별도 API 키는 필요하지 않습니다. Windows에서는 Node.js/npm을 설치한 후 아래를 실행합니다.
+이 Fork의 영상 생성은 **Higgsfield CLI 한 가지 방식**만 사용합니다. 별도 API 키 없이 Higgsfield 계정으로 로그인합니다. Windows에서는 Node.js/npm을 설치한 후 아래를 실행합니다.
 
 ```powershell
 npm install -g @higgsfield/cli
 higgsfield auth login
 higgsfield account status
-higgsfield model get seedance_2_5
+higgsfield model get kling3_0
 ```
 
-브라우저 로그인 후 Higgsfield 계정의 구독 크레딧으로 생성합니다. **Higgsfield 웹의 무료·Unlimited 혜택은 CLI 생성에는 적용되지 않습니다.** 실행 전에는 `higgsfield generate cost`로 크레딧 비용을 확인하세요. 모델 ID는 `seedance_2_5`로 고정하며, 지원 길이는 4~30초입니다.
+브라우저 로그인 후 Higgsfield 계정의 구독 크레딧으로 생성합니다. **Higgsfield 웹의 무료·Unlimited 혜택은 CLI 생성에는 적용되지 않습니다.** 실행 전에는 `higgsfield generate cost`로 크레딧 비용을 확인하세요. 모델 ID는 `kling3_0`로 고정하며, 지원 길이는 3~15초입니다.
 
 ### 4.2 생성 전에 무료 Dry Run 실행
 
@@ -175,18 +175,18 @@ py scripts/seedance_video.py --prompt "따뜻한 주방에서 빵 반죽이 발�
 실제 크레딧 확인 예시(생성하지 않음):
 
 ```powershell
-higgsfield generate cost seedance_2_5 --mode omni_reference --start-image product.jpg --prompt "따뜻한 주방에서 빵 반죽이 발효되는 장면" --duration 5 --resolution 720p --aspect_ratio 9:16
+higgsfield generate cost kling3_0 --mode std --start-image product.jpg --prompt "따뜻한 주방에서 빵 반죽이 발효되는 장면" --duration 5 --aspect_ratio 9:16 --sound off
 ```
 
 ### 4.3 실제 영상 생성
 
 ```powershell
-py scripts/seedance_video.py --prompt-file prompt_ko.txt --image product.jpg --duration 5 --out reel/raw.mp4
+py scripts/seedance_video.py --prompt-file prompt_ko.txt --image product.jpg --duration 5 --no-audio --out reel/raw.mp4
 ```
 
 - `--prompt` 또는 `--prompt-file`로 제작 프롬프트 지정
-- `--image`는 참조 사진을 최대 4장까지 반복 지정 가능
-- `--duration`으로 길이 지정(기본값 15초, Seedance 2.5 지원 범위 4~30초)
+- `--image`는 JPG/PNG/WebP 제품 사진 1장만 지정 가능
+- `--duration`으로 길이 지정(기본값 15초, Kling 3.0 지원 범위 3~15초)
 - 결과 MP4를 `--out`에 저장
 - 작업 정보는 `reel/raw.job.json`에 저장
 - 생성 중 연결이 끊겼다면 `--resume`으로 **기존 작업 조회**
@@ -310,7 +310,7 @@ python3 scripts/schedule.py plan.json --start 2026-11-09
 python3 scripts/preview.py plan.json --out preview/
 ```
 
-위 스크립트는 Fork의 기존 기능입니다. Seedance 확장을 사용하지 않아도 계속 동작하도록 유지했습니다.
+위 스크립트는 Fork의 기존 기능입니다. Kling 3.0 확장을 사용하지 않아도 계속 동작하도록 유지했습니다.
 
 ## 7. 검수 항목
 
@@ -362,7 +362,7 @@ MCP 연결 후 Codex 세션을 새로 열거나 재개해야 할 수 있습니�
 - 동일한 콘텐츠를 여러 계정에 무분별하게 반복 게시하지 않습니다.
 - 가로 영상을 사전 확인 없이 무조건 자르거나 타인의 영상을 자신의 원본인 것처럼 사용하지 않습니다.
 
-**원본과 확장판의 기능 차이:** 원본은 이미 만들어진 실사 영상을 릴스로 마무리하며 장면 편집이나 자체 AI 영상 생성을 제공하지 않습니다. 이 Fork에서는 **Seedance 영상 생성과 별도 FFmpeg 편집 모듈**을 추가하여 해당 작업을 선택적으로 지원합니다. 다만 자동 음성 합성, 전문 NLE 수준의 장면 편집, 텍스트만으로 된 모션그래픽 릴스 제작은 현재 지원 범위가 아닙니다.
+**원본과 확장판의 기능 차이:** 원본은 이미 만들어진 실사 영상을 릴스로 마무리하며 장면 편집이나 자체 AI 영상 생성을 제공하지 않습니다. 이 Fork에서는 **Kling 3.0 영상 생성과 별도 FFmpeg 편집 모듈**을 추가하여 해당 작업을 선택적으로 지원합니다. 다만 자동 음성 합성, 전문 NLE 수준의 장면 편집, 텍스트만으로 된 모션그래픽 릴스 제작은 현재 지원 범위가 아닙니다.
 
 **AI 제품 광고 주의:** 생성 영상은 실제 제품 외형과 다를 수 있습니다. 실제 제품 사진과 대조하고, 허위 성능 표시·권리 없는 음악·초상권 문제·AI 콘텐츠 표시 요건을 게시 전에 검토해야 합니다. 업로드 단계에서 필요한 앱 내 설정은 체크리스트에 남깁니다.
 
@@ -376,10 +376,10 @@ MCP 연결 후 Codex 세션을 새로 열거나 재개해야 할 수 있습니�
 **Q. Codex에서 한국어로 제작을 요청할 수 있나요?**  
 네. 한국어로 지시할 수 있고, 한글 글꼴 및 영상 자막을 지원하도록 확장했습니다. 다만 원본 내부의 모든 출력 메시지가 한국어로 번역된 것은 아닙니다.
 
-**Q. Seedance 없이도 기존 기능을 쓸 수 있나요?**  
-네. Seedance는 선택 기능이며, 사진·캐러셀·기존 영상 릴스·스토리·검수·미리보기·게시 기능은 그대로 유지됩니다.
+**Q. Kling 3.0 없이도 기존 기능을 쓸 수 있나요?**  
+네. Kling 3.0는 선택 기능이며, 사진·캐러셀·기존 영상 릴스·스토리·검수·미리보기·게시 기능은 그대로 유지됩니다.
 
-**Q. Seedance 영상은 무료인가요?**  
+**Q. Kling 3.0 영상은 무료인가요?**  
 아닙니다. `--dry-run`은 무료이지만 실제 모델 생성에는 Higgsfield 구독 크레딧이 사용됩니다. CLI 생성에는 웹사이트의 Unlimited 혜택이 적용되지 않습니다.
 
 **Q. 인간의 검토와 수정 피드백을 반복할 수 있나요?**  
@@ -408,7 +408,7 @@ instagram-skill/
 ├── LICENSE                        # 원본 MIT 라이선스
 ├── skills/
 │   └── instagram-skill/
-│       ├── SKILL.md                # 원본 워크플로 + 선택적 Seedance 절차
+│       ├── SKILL.md                # 원본 워크플로 + 선택적 Kling 3.0 절차
 │       ├── scripts/
 │       │   ├── check_setup.py      # 환경 점검 (기존)
 │       │   ├── render_slides.py    # 이미지·캐러셀 + 선택적 한글 글꼴
@@ -418,10 +418,10 @@ instagram-skill/
 │       │   ├── preview.py          # 피드·그리드 미리보기 (기존)
 │       │   ├── upload_parts.py     # WoopSocial 미디어 업로드 (기존)
 │       │   ├── log.py              # 게시·성과 로그 (기존)
-│       │   ├── seedance_video.py   # [신규] Seedance 영상 생성
+│       │   ├── seedance_video.py   # [신규] Kling 3.0 영상 생성
 │       │   └── compose_reel.py     # [신규] 한국어 자막·영상 결합
 │       ├── references/
-│       │   ├── README_KO.md        # [신규] Seedance 상세 한국어 가이드
+│       │   ├── README_KO.md        # [신규] Kling 3.0 상세 한국어 가이드
 │       │   ├── instagram-specs.md  # 인스타그램 게시 규격
 │       │   ├── plan-json.md        # 게시 계획 JSON 구조
 │       │   ├── woopsocial.md       # 게시 API 연결 절차

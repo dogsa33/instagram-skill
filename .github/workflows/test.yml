@@ -27,5 +27,7 @@ jobs:
         run: "! grep -rn '/Users/' skills/ --include='*.md' --include='*.py' --include='*.json'"
       - name: Example plan passes the checks
         run: python skills/instagram-skill/scripts/ig_check.py skills/instagram-skill/examples/water-week/plan.json
+      - name: Offline Kling adapter tests (no API calls)
+        run: python -m unittest discover -s tests -p test_seedance_extension.py -v
       - name: Full pipeline (render, check, fix, Reel tools, schedule, preview, log)
         run: python tests/run_pipeline.py work

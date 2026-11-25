@@ -124,9 +124,9 @@ slide types and type rules: `references/design-rules.md`. In short:
 **The user's own photos and screenshots.** Use them as they are, or inside slides (`photo`,
 `screenshot`, `beforeafter`). `ig_check.py --fix` converts and fits them.
 
-**Optional Seedance-generated Reels (Higgsfield CLI only).** When the user requests
-AI-generated footage, use the installed official Higgsfield CLI to run Seedance 2.5.
-This does not replace the existing real-footage workflow or publish content.
+**Optional Kling 3.0 Reels (Higgsfield CLI only).** When the user explicitly requests
+AI-generated footage, use the existing adapter (kept at `seedance_video.py` to avoid
+breaking existing commands), now hard-wired to Kling 3.0. It never publishes.
 
 ```bash
 python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 5 --out reel/raw.mp4 --dry-run
@@ -134,20 +134,20 @@ python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg -
 python3 scripts/compose_reel.py --clip reel/raw.mp4 --photo product.jpg --captions captions_ko.json --out reel/final.mp4
 ```
 
-- Install Higgsfield CLI (`npm install -g @higgsfield/cli`), then run `higgsfield auth login`.
-  No Replicate account or API key is needed. CLI generations spend Higgsfield plan
-  credits even if the website offers unlimited generations; check cost before creating.
-- `--dry-run` is offline and never charges. The adapter uses the single model
-  `seedance_2_5`, with `--mode omni_reference` for reference photos or
-  `--mode t2v` for prompt-only videos. Duration must be 4–30 seconds.
-- The generated job ID is saved in `reel/raw.job.json`; use `--resume` to
-  check that job rather than submitting another paid generation.
-- For Korean slide/cover lettering set `INSTAGRAM_SKILL_LANG=ko` or set
-  `INSTAGRAM_KOREAN_FONT`. Default English fonts are unchanged.
-- Use the unchanged `compose_reel.py` for Korean captions, clip assembly, and
-  optionally appending a genuine product photo. Review AI product accuracy and claims.
-- Then follow the ORIGINAL `reel.py` (cover/zones), `ig_check.py`, `preview.py`
-  and WoopSocial workflow. Posting requires explicit user approval.
+- Install the official Higgsfield CLI (`npm install -g @higgsfield/cli`) and run
+  `higgsfield auth login`. No separate API token. CLI generations consume credits.
+- Check `higgsfield model get kling3_0` and `higgsfield generate cost kling3_0 ...`
+  before the first paid generation. `--dry-run` never invokes the CLI or spends credits.
+- Only `kling3_0` is supported: default economy `std` mode, 9:16 output, 3–15s.
+  Accepts prompt alone or **one** actual product photo via `--start-image`.
+  Kling 3.0 does not accept Seedance's multi-reference modes or `--resolution` parameter.
+  `--no-audio` maps to Kling's `--sound off`.
+- Save generation ID in `reel/raw.job.json`; use `--resume` to poll the existing
+  generation instead of submitting another paid job. An old-model job is rejected.
+- For Korean slide/cover lettering, set `INSTAGRAM_SKILL_LANG=ko` or
+  `INSTAGRAM_KOREAN_FONT`. Existing English font defaults are unchanged.
+- Keep `compose_reel.py`, `reel.py`, `ig_check.py`, `preview.py` and WoopSocial
+  unchanged; verify product accuracy and require user approval before posting.
 - Korean Windows setup: `references/README_KO.md`.
 
 **Reels from the user's own video.** This skill finishes Reels; it doesn't edit footage.
