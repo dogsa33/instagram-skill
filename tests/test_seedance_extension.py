@@ -57,15 +57,12 @@ class SeedanceTests(unittest.TestCase):
             job.write_text(json.dumps({"id": "pred_123", "model": "bytedance/seedance-2.5"}))
             args = self.seedance.parse_args(["--resume", "--out", str(out)])
             calls = []
-
             def get(url, token, *params, **kw):
                 calls.append(url)
                 return {"id": "pred_123", "status": "succeeded", "output": "https://example.com/result.mp4"}
-
             def save(url, path):
                 Path(path).write_bytes(b"MP4")
                 return Path(path)
-
             with mock.patch.dict(os.environ, {"REPLICATE_API_TOKEN": "fake-token"}):
                 with mock.patch.object(self.seedance, "_api_request", side_effect=get):
                     with mock.patch.object(self.seedance, "_download_video", side_effect=save):

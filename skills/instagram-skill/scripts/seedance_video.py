@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Optional Replicate Seedance adapter for instagram-skill.
 
-Requires Python 3.9+ and REPLICATE_API_TOKEN for paid API calls.
+Requires only Python 3.9+ and REPLICATE_API_TOKEN for paid API calls.
 Does not publish content. Dry run is safe and free.
 
 Examples:
