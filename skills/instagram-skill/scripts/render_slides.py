@@ -81,7 +81,31 @@ def warn(msg):
 
 # ---------- fonts ----------
 
+def _korean_font_override():
+    """Opt-in Korean font; default Inter/Instrument Serif remains unchanged."""
+    explicit = os.environ.get("INSTAGRAM_KOREAN_FONT", "").strip()
+    if explicit:
+        path = os.path.expanduser(explicit)
+        if not os.path.isfile(path):
+            sys.exit(f"INSTAGRAM_KOREAN_FONT does not exist: {path}")
+        return path
+    if os.environ.get("INSTAGRAM_SKILL_LANG", "").strip().lower() not in ("ko", "ko-kr"):
+        return None
+    for path in (
+        r"C:\Windows\Fonts\malgun.ttf",  # Windows Malgun Gothic
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+    ):
+        if os.path.isfile(path):
+            return path
+    sys.exit("Korean font not available. Set INSTAGRAM_KOREAN_FONT to a Korean TTF/OTF/TTC file.")
+
+
 def font_path(kind):
+    override = _korean_font_override()
+    if override:
+        return override
     name, remote = FONT_FILES[kind]
     path = os.path.join(FONTS, name)
     if os.path.exists(path):
