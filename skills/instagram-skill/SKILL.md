@@ -124,6 +124,25 @@ slide types and type rules: `references/design-rules.md`. In short:
 **The user's own photos and screenshots.** Use them as they are, or inside slides (`photo`,
 `screenshot`, `beforeafter`). `ig_check.py --fix` converts and fits them.
 
+
+**Optional Seedance-generated Reels (Replicate).** Use only when the user
+explicitly requests AI-generated original footage. This is an additional
+workflow, not a replacement for the existing real-footage Reel workflow.
+
+```bash
+python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 15 --out reel/raw.mp4 --dry-run
+python3 scripts/seedance_video.py --prompt-file prompt.txt --image product.jpg --duration 15 --out reel/raw.mp4
+python3 scripts/compose_reel.py --clip reel/raw.mp4 --photo product.jpg --captions captions_ko.json --out reel/final.mp4
+```
+
+- Set REPLICATE_API_TOKEN privately before actual generation; never put credentials in a tracked file or commit. Run --dry-run before any paid request.
+- A prediction state file is saved as reel/raw.job.json; resume with --resume to prevent submitting a duplicate paid job.
+- For Korean slides and cover lettering, set INSTAGRAM_SKILL_LANG=ko or provide INSTAGRAM_KOREAN_FONT. Otherwise original English fonts and behavior remain unchanged.
+- compose_reel.py can join multiple --clip files, preserve source audio, overlay timecoded UTF-8 Korean captions, and append the unchanged actual product photo.
+- The AI-generated product's physical appearance and any advertising claims require human review. Do not fabricate specifications, testimonials, certifications, or use unlicensed music.
+- Next use the ORIGINAL reel.py (cover/zones), ig_check.py, preview.py and WoopSocial scheduling pipeline. Never post or schedule without explicit user approval; revisions require a fresh preview.
+- Korean setup and usage instructions: references/README_KO.md.
+
 **Reels from the user's own video.** This skill finishes Reels; it doesn't edit footage.
 
 ```bash
